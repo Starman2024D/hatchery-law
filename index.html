@@ -61,16 +61,6 @@
   .tag.quiz{background:rgba(201,164,92,.18);color:var(--gold)}
   .qnum{color:var(--muted);font-size:.8rem;margin-left:auto}
   .card h3{font-size:1.2rem;margin:0 0 6px}
-  .tag.pe{background:rgba(169,201,143,.14);color:var(--leaf)}
-  .pollev{background:#fff;border-radius:10px;overflow:hidden;margin-top:6px}
-  .pollev iframe{display:block;width:100%;height:440px;border:0}
-  .pollev.demo{background:var(--panel2);border:2px dashed var(--line);padding:18px;color:var(--sage)}
-  .pollev.demo .pv-top{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-  .pollev.demo .pv-opt{background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px;margin:6px 0;display:flex;justify-content:space-between;color:var(--cream);font-size:.92rem}
-  .pollev.demo .pv-opt i{font-style:normal;color:var(--muted)}
-  .pe-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
-  .pe-code{font-size:.9rem;color:var(--sage)} .pe-code b{color:var(--gold2)}
-  .btn.small{padding:7px 14px;font-size:.82rem}
   .card .ctx{color:var(--sage);margin:0 0 14px;font-size:.95rem}
   .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
   .opt{position:relative;overflow:hidden;text-align:left;background:var(--panel2);border:1.5px solid transparent;color:var(--cream);padding:13px 14px;border-radius:10px;font:600 .95rem var(--font);cursor:pointer;transition:border-color .15s, transform .1s}
@@ -242,24 +232,7 @@
 const CONFIG = {
   liveDbUrl: "",
   defaultSession: "hatchery",
-  refreshSeconds: 6,
-
-  /* POLL EVERYWHERE (optional)
-     For each poll, paste the "Copy embed script" from Share & embed (the whole
-     <iframe ...> snippet or just its https://pollev-embeds.com/... address).
-     "results" is optional: the Live Presentation view link for the Class results tab.
-     Polls left blank keep the built-in voting buttons. */
-  pollEverywhere: {
-    username: "stephendale855",          // e.g. "hatcherylaw" shows "Vote at PollEv.com/hatcherylaw"
-    polls: {
-      q01: { embed: "https://embed.polleverywhere.com/multiple_choice_polls/W4e3z35YXLe911NLyDn6E?controls=none&short_poll=true", results: "" },
-      q03: { embed: "", results: "" },
-      q06: { embed: "", results: "" },
-      q09: { embed: "", results: "" },
-      q15: { embed: "", results: "" },
-      q16: { embed: "", results: "" }
-    }
-  }
+  refreshSeconds: 15
 };
 
 const LINKS = {
@@ -442,27 +415,6 @@ function linkChips(ids) {
   return `<div class="links">${ids.map(id => `<a class="chip" href="${LINKS[id].u}" target="_blank" rel="noopener">${esc(LINKS[id].t)} ↗</a>`).join("")}</div>`;
 }
 
-const DEMO_PE = params.get("demo") === "pollev";
-const PE = CONFIG.pollEverywhere || { polls: {} };
-const PE_USER = PE.username || (DEMO_PE ? "yourname" : "");
-function srcFrom(v) { if (!v) return ""; const m = String(v).match(/src=["']([^"']+)["']/); const u = (m ? m[1] : String(v)).trim(); return /^https:\/\//.test(u) ? u : ""; }
-function peFor(q) {
-  if (q.type !== "poll") return null;
-  const c = (PE.polls || {})[q.id] || {};
-  const embed = srcFrom(c.embed), results = srcFrom(c.results);
-  if (embed || results) return { embed, results, demo: false };
-  return DEMO_PE ? { embed: "", results: "", demo: true } : null;
-}
-function peFrame(q, pe, kind) {
-  const url = kind === "results" ? pe.results : pe.embed;
-  if (url) return `<div class="pollev"><iframe src="${esc(url)}" title="Poll Everywhere: ${esc(q.q)}" loading="lazy" allow="clipboard-write"></iframe></div>`;
-  if (kind === "results" && !pe.demo) return "";
-  return `<div class="pollev demo" role="img" aria-label="Preview of where the Poll Everywhere activity will appear">
-    <div class="pv-top"><span>Poll Everywhere ${kind === "results" ? "live results" : "activity"} · preview</span><span>Your embed appears here</span></div>
-    ${q.opts.map(o => `<div class="pv-opt"><span>${esc(o)}</span><i>${kind === "results" ? "live %" : "tap to vote"}</i></div>`).join("")}
-  </div>`;
-}
-
 function renderQuestions() {
   const host = document.getElementById("sections");
   let n = 0;
@@ -472,19 +424,7 @@ function renderQuestions() {
       <div class="eyebrow">${esc(sec.eyebrow)}</div>
       <h2>${esc(sec.title)}</h2>
       <p class="lead">${esc(sec.lead)}</p>
-      ${qs.map(q => { n++; const pe = peFor(q); if (pe) return `
-        <article class="card pe-card" id="${q.id}" data-qid="${q.id}">
-          <div class="head"><span class="tag poll">Poll</span><span class="tag pe">Poll Everywhere</span><span class="qnum">Question ${n} of ${QUESTIONS.length}</span></div>
-          <h3>${esc(q.q)}</h3>
-          ${q.ctx ? `<p class="ctx">${esc(q.ctx)}</p>` : ""}
-          ${peFrame(q, pe, "embed")}
-          <div class="pe-row">
-            ${PE_USER ? `<span class="pe-code">Or vote on your phone at <b>PollEv.com/${esc(PE_USER)}</b></span>` : ""}
-            ${pe.results ? `<a class="chip" href="${esc(pe.results)}" target="_blank" rel="noopener">Live results ↗</a>` : ""}
-            <button class="btn small" data-voted>I've voted</button>
-          </div>
-          <div class="feedback"><div class="fbtext"></div>${linkChips(q.links)}</div>
-        </article>`; return `
+      ${qs.map(q => { n++; return `
         <article class="card" id="${q.id}" data-qid="${q.id}">
           <div class="head"><span class="tag ${q.type}">${q.type === "quiz" ? "Quiz" : "Poll"}</span><span class="qnum">Question ${n} of ${QUESTIONS.length}</span></div>
           <h3>${esc(q.q)}</h3>
@@ -499,22 +439,12 @@ function renderQuestions() {
 
   host.querySelectorAll(".card").forEach(card => {
     card.querySelectorAll(".opt").forEach(btn => btn.addEventListener("click", () => answer(card.dataset.qid, +btn.dataset.i)));
-    const v = card.querySelector("[data-voted]");
-    if (v) v.addEventListener("click", () => { answers[card.dataset.qid] = -1; save(KEY_ANS, answers); paintAll(); });
   });
 }
 
 function paintCard(q) {
   const card = document.getElementById(q.id);
   if (!card) return;
-  if (card.classList.contains("pe-card")) {
-    const done = answers[q.id] !== undefined;
-    card.classList.toggle("answered", done);
-    const v = card.querySelector("[data-voted]");
-    v.disabled = done; v.textContent = done ? "Voted ✓" : "I've voted";
-    if (done) card.querySelector(".fbtext").innerHTML = `<strong class="poll">Thanks for voting.</strong> ${esc(q.explain)} Live percentages are shown in Poll Everywhere.`;
-    return;
-  }
   const mine = answers[q.id];
   const done = mine !== undefined;
   card.classList.toggle("answered", done);
@@ -548,12 +478,6 @@ function paintCard(q) {
 function renderResults() {
   const host = document.getElementById("resultsList");
   host.innerHTML = QUESTIONS.map((q, n) => {
-    const pe = peFor(q);
-    if (pe) return `<div class="rcard">
-      <div class="head" style="display:flex;gap:10px;align-items:center;margin-bottom:6px"><span class="tag poll">Poll</span><span class="tag pe">Poll Everywhere</span><span class="qnum" style="color:var(--muted);font-size:.8rem;margin-left:auto">Q${n + 1}</span></div>
-      <h3>${esc(q.q)}</h3>
-      ${peFrame(q, pe, "results") || `<p style="color:var(--sage);margin:0">Live results for this poll are in Poll Everywhere.</p>`}
-    </div>`;
     const c = counts[q.id] || q.opts.map(() => 0);
     const total = c.reduce((a, b) => a + b, 0);
     let extra = "";
@@ -637,7 +561,7 @@ renderQuestions();
 renderResources();
 counts = emptyCounts();
 fetchCounts().then(paintAll);
-if (LIVE) setInterval(() => fetchCounts().then(paintAll), CONFIG.refreshSeconds * 1000);
+if (LIVE) setInterval(() => { if (!document.hidden) fetchCounts().then(paintAll); }, CONFIG.refreshSeconds * 1000);
 </script>
 </body>
 </html>
